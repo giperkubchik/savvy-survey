@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Survey</title>
+<link rel="preconnect" href="https://fonts.cdnfonts.com"/>
+<link href="https://fonts.cdnfonts.com/css/gilroy-free" rel="stylesheet"/>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    font-family: 'Gilroy', 'Inter', system-ui, sans-serif;
+    background: #F5EFE6;
+    color: #1C0F0A;
+  }
+
+  /* ─── TOP NAV ─── */
+  .topnav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px 0;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .back-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 1.5px solid #D9CEBF;
+    background: #F5EFE6;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .back-btn:hover { background: #EDE6D8; }
+  .back-btn svg { width: 16px; height: 16px; }
+
+  /* segmented progress */
+  .progress-track { display: flex; align-items: center; flex: 1; }
+  .seg { display: flex; align-items: center; flex: 1; }
+  .seg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; transition: background 0.4s; }
+  .seg-line { flex: 1; height: 3px; border-radius: 2px; transition: background 0.4s; }
+  .seg.done .seg-dot, .seg.done .seg-line,
+  .seg.active .seg-dot { background: #1C0F0A; }
+  .seg.active .seg-line,
+  .seg.future .seg-dot, .seg.future .seg-line { background: #D9CEBF; }
+  .seg:last-child .seg-line { display: none; }
+
+  /* ─── SCREENS ─── */
+  .screens { position: relative; overflow: hidden; }
+  .screen {
+    position: absolute; width: 100%; top: 0; left: 0;
+    opacity: 0; transform: translateX(60px); pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(.4,0,.2,1), transform 0.4s cubic-bezier(.4,0,.2,1);
+  }
+  .screen.active { position: relative; opacity: 1; transform: translateX(0); pointer-events: all; }
+  .screen.exit { opacity: 0; transform: translateX(-60px); }
+
+  /* ─── CONTENT ─── */
+  .content {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+  }
+  .question-title {
+    font-size: clamp(30px, 6vw, 40px);
+    font-weight: 800;
+    line-height: 1.2;
+    color: #1C0F0A;
+    margin-bottom: 28px;
+    text-align: center;
+  }
+  .question-sub {
+    font-size: 14px;
+    font-weight: 500;
+    color: #8A7060;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  /* ─── GRID ─── */
+  .grid-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .grid-opt {
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #EDE6D8;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s;
+  }
+  .grid-opt:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 40px rgba(28,15,10,0.18);
+  }
+  .grid-opt:active { transform: translateY(-2px); }
+
+  /* ─── IMAGE WRAPPER (relative, clips zoom + holds floating bar) ─── */
+  .grid-opt-inner {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    background: #DDD5C5;
+    border-radius: 20px;
+  }
+  #q1 .grid-opt-inner, #q2 .grid-opt-inner {
+    aspect-ratio: 3 / 3.2;
+  }
+
+  .grid-opt-inner img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: top center;
+    display: block;
+    transition: transform 0.45s cubic-bezier(.4,0,.2,1);
+  }
+  .grid-opt:hover .grid-opt-inner img { transform: scale(1.09); }
+
+  /* ─── FLOATING BAR (inside image, with inset margins) ─── */
+  .grid-opt-bar {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    right: 5px;
+    background: #2C1810;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 12px 13px 18px;
+  }
+  .grid-opt-bar-label {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
+    font-family: 'Gilroy', 'Inter', sans-serif;
+    line-height: 1;
+  }
+  .grid-opt-bar-arrow {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .grid-opt-bar-arrow svg { width: 16px; height: 16px; }
+
+  /* ─── LIST SINGLE SELECT OPTIONS (Q4, Q5) ─── */
+  .list-options { display: flex; flex-direction: column; gap: 10px; }
+
+  .list-opt {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #EDE6D8;
+    border-radius: 16px;
+    padding: 16px 18px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s;
+  }
+  .list-opt:hover { background: #E4D9C8; }
+  .list-opt.selected { background: #E4D9C8; }
+
+  .list-opt-icon {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: rgba(245, 239, 230, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .list-opt-icon svg { width: 24px; height: 24px; }
+
+  .list-opt-text {
+    flex: 1;
+    font-size: 17px;
+    font-weight: 700;
+    color: #1C0F0A;
+    font-family: 'Gilroy', 'Inter', sans-serif;
+    line-height: 1.3;
+  }
+
+  .list-opt-radio {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid #C5B8A8;
+    background: transparent;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .list-opt:hover .list-opt-radio { border-color: #C5B8A8; background: transparent; }
+  .list-opt.selected .list-opt-radio {
+    background: #2C1810;
+    border-color: #2C1810;
+  }
+  .list-opt-radio svg {
+    width: 14px; height: 14px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .list-opt.selected .list-opt-radio svg { opacity: 1; }
+
+  /* ─── INTERSTITIAL ─── */
+  .inter-img {
+    width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    object-position: center top;
+    border-radius: 20px;
+    display: block;
+    margin-bottom: 28px;
+    filter: sepia(60%) saturate(80%) hue-rotate(340deg) brightness(0.95);
+  }
+  .inter-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: #8A7060;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .inter-title {
+    font-size: clamp(22px, 4vw, 28px);
+    font-weight: 800;
+    color: #1C0F0A;
+    line-height: 1.3;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+  .stats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #EDE6D8;
+    border-radius: 16px;
+    padding: 16px 20px;
+  }
+  .stat-num {
+    font-size: 32px;
+    font-weight: 800;
+    color: #2C1810;
+    line-height: 1;
+    white-space: nowrap;
+    min-width: 80px;
+  }
+  .stat-text {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1C0F0A;
+    line-height: 1.35;
+  }
+  .inter-footnote {
+    font-size: 11px;
+    color: #A09080;
+    line-height: 1.5;
+    margin-bottom: 28px;
+    text-align: left;
+  }
+  .btn-continue {
+    display: block;
+    width: auto;
+    min-width: 300px;
+    margin: 0 auto;
+    padding: 18px 56px;
+    border: none;
+    border-radius: 50px;
+    background: #2C1810;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: 'Gilroy', 'Inter', sans-serif;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .btn-continue:hover {
+    background: #1C0F0A;
+    box-shadow: 0 8px 24px rgba(28,15,10,0.28);
+  }
+  /* Fixed continue bar (same pattern as chart CTA) */
+  .btn-bar {
+    display: none;
+    padding: 20px 24px max(24px, env(safe-area-inset-bottom));
+    background: linear-gradient(to top, #F5EFE6 75%, transparent);
+    text-align: center;
+  }
+  /* Skip button on analyze screen */
+  .btn-skip {
+    display: block;
+    margin: 0 auto 16px;
+    padding: 8px 20px;
+    background: transparent;
+    border: 1.5px solid #C5B8A8;
+    border-radius: 20px;
+    color: #8A7060;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Gilroy','Inter',sans-serif;
+    cursor: pointer;
+  }
+
+  /* ─── THANK YOU ─── */
+  .thankyou-content { text-align: center; padding-top: 80px; }
+  .ty-icon { font-size: 80px; display: block; margin-bottom: 28px; animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+  .ty-title { font-size: 36px; font-weight: 800; margin-bottom: 12px; color: #1C0F0A; text-align: center; }
+  .ty-sub { font-size: 16px; color: #8A7060; line-height: 1.6; max-width: 320px; margin: 0 auto; text-align: center; }
+
+  /* ─── ANALYZING SCREEN ─── */
+  .analyze-title {
+    font-size: clamp(28px, 5vw, 38px);
+    font-weight: 800;
+    color: #1C0F0A;
+    text-align: center;
+    margin-bottom: 40px;
+    line-height: 1.2;
+  }
+
+  .analyze-bars { display: flex; flex-direction: column; gap: 28px; margin-bottom: 44px; }
+
+  .analyze-item {}
+  .analyze-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .analyze-label {
+    font-size: 17px; font-weight: 700; color: #1C0F0A;
+    font-family: 'Gilroy', 'Inter', sans-serif;
+  }
+  .analyze-right { display: flex; align-items: center; }
+  .analyze-slot {
+    position: relative;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .analyze-pct {
+    position: absolute;
+    font-size: 17px; font-weight: 800; color: #8A7060;
+    font-family: 'Gilroy', 'Inter', sans-serif;
+    text-align: center; white-space: nowrap;
+    transition: opacity 0.25s ease;
+  }
+  .analyze-check {
+    position: absolute;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #2C1810;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(0.4);
+    transition: opacity 0.4s, transform 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .analyze-check.visible { opacity: 1; transform: scale(1); }
+  .analyze-check svg { width: 15px; height: 15px; }
+
+  .analyze-track {
+    height: 6px; border-radius: 3px;
+    background: #DDD5C5; overflow: hidden;
+  }
+  .analyze-fill {
+    height: 100%; border-radius: 3px;
+    background: #2C1810; width: 0%;
+    transition: width 0.12s linear;
+  }
+
+  /* Reviews */
+  .review-wrap { position: relative; min-height: 230px; overflow: hidden; border-radius: 18px; }
+  .review-card {
+    position: absolute; top: 0; left: 0; right: 0;
+    background: #EDE6D8; border-radius: 18px;
+    padding: 22px 22px 0;
+    opacity: 0; transform: translateX(60px);
+    transition: opacity 0.65s ease, transform 0.65s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+    display: flex; flex-direction: column;
+  }
+  .review-card.visible { opacity: 1; transform: translateX(0); pointer-events: all; }
+  .review-card.exit { opacity: 0; transform: translateX(-60px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.4,0,.2,1); }
+
+  .review-stars { color: #C8860A; font-size: 15px; margin-bottom: 10px; letter-spacing: 2px; }
+  .review-title { font-size: 16px; font-weight: 800; color: #1C0F0A; margin-bottom: 6px; font-family: 'Gilroy','Inter',sans-serif; }
+  .review-body { font-size: 14px; color: #5A4030; line-height: 1.5; flex: 1; }
+  .review-footer { margin-top: 16px; padding-bottom: 10px; }
+  .review-author { font-size: 13px; font-weight: 700; color: #2C1810; }
+  .review-source { font-size: 12px; color: #8A7060; }
+
+  /* ── Chart screen ── */
+  .chart-screen-content { max-width: 600px; margin: 0 auto; padding: 32px 24px 100px; }
+  .chart-title { font-size: clamp(24px,5vw,34px); font-weight: 800; color: #1C0F0A; text-align: center; line-height: 1.25; margin-bottom: 8px; }
+  .chart-subtitle { font-size: 16px; font-weight: 500; color: #8A7060; text-align: center; margin-bottom: 32px; }
+  .chart-card { background: #EDE6D8; border-radius: 20px; padding: 24px 20px 20px; margin-bottom: 0; }
+  .chart-card + .chart-caption { margin-top: 0; }
+  .chart-card-title { font-size: 18px; font-weight: 800; color: #1C0F0A; margin-bottom: 16px; text-align: center; }
+  .chart-svg-wrap { width: 100%; }
+  .chart-svg-wrap svg { width: 100%; height: auto; overflow: visible; }
+  .chart-axis-label { font-size: 12px; font-weight: 600; fill: #8A7060; font-family: 'Gilroy','Inter',sans-serif; }
+  .chart-caption { font-size: 15px; color: #8A7060; line-height: 1.5; text-align: center; padding: 12px 8px 0; }
+  .chart-end-group { opacity: 0; transition: opacity 0.5s ease; }
+  #chart-fill1, #chart-fill2, #chart-fill3 { opacity: 0; transition: opacity 0.4s ease; }
+  .chart-cta-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 24px max(20px, env(safe-area-inset-bottom)); background: linear-gradient(to top, #F5EFE6 70%, transparent); display: none; }
+  .chart-cta { display: block; width: auto; min-width: 300px; margin: 0 auto; background: #2C1810; color: #fff; border: none; border-radius: 50px; padding: 18px 56px; font-size: 15px; font-weight: 800; font-family: 'Gilroy','Inter',sans-serif; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: background 0.2s, box-shadow 0.2s; }
+  .chart-cta:hover { background: #1C0F0A; box-shadow: 0 8px 24px rgba(28,15,10,0.28); }
+
+  @keyframes popIn {
+    0%   { transform: scale(0) rotate(-10deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg);   opacity: 1; }
+  }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    .content { padding: 20px 16px 32px; }
+    .question-title { font-size: clamp(22px, 6vw, 32px); margin-bottom: 20px; }
+    .grid-options { gap: 10px; }
+    .grid-opt-bar-label { font-size: 14px; }
+    .grid-opt-bar-arrow { width: 28px; height: 28px; }
+    .grid-opt-bar { padding: 10px 10px 10px 14px; }
+    .stat-num { font-size: 26px; min-width: 64px; }
+    .stat-text { font-size: 14px; }
+    .stat-row { padding: 12px 14px; gap: 12px; }
+    .inter-img { max-height: 220px; margin-bottom: 20px; }
+    .inter-title { font-size: clamp(20px, 5vw, 26px); margin-bottom: 18px; }
+    .list-opt-text { font-size: 15px; }
+    .list-opt { padding: 13px 14px; gap: 12px; }
+    .list-opt-icon { width: 40px; height: 40px; }
+    .btn-continue { min-width: 260px; padding: 16px 40px; }
+    .chart-card-title { font-size: 16px; }
+    .chart-title { font-size: clamp(20px, 5vw, 28px); }
+    .chart-subtitle { font-size: 14px; }
+    .chart-caption { font-size: 13px; }
+    .review-wrap { min-height: 240px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<div class="topnav" id="topnav">
+  <button class="back-btn" id="backBtn" onclick="goBack()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#1C0F0A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 18l-6-6 6-6"/>
+    </svg>
+  </button>
+  <div class="progress-track" id="progressTrack"></div>
+</div>
+
+<div class="screens">
+
+  <!-- Q1: Who are you to the child -->
+  <div class="screen active" id="q1">
+    <div class="content">
+      <h2 class="question-title">Who are you to the child?</h2>
+      <div class="grid-options">
+
+        <div class="grid-opt" onclick="pick(1,'mom',2)">
+          <div class="grid-opt-inner">
+            <img src="images/mom.webp" alt="Mom"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">Mom</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-opt" onclick="pick(1,'dad',2)">
+          <div class="grid-opt-inner">
+            <img src="images/dad.webp" alt="Dad"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">Dad</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-opt" onclick="pick(1,'grandparent',2)">
+          <div class="grid-opt-inner">
+            <img src="images/grandparent.webp" alt="Grandparent"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">Grandparent</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-opt" onclick="pick(1,'other',2)">
+          <div class="grid-opt-inner">
+            <img src="images/other caregiver.webp" alt="Other Caregiver"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">Other Caregiver</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Q2: How old is your child -->
+  <div class="screen" id="q2">
+    <div class="content">
+      <h2 class="question-title">How old is your child?</h2>
+      <p class="question-sub">Think about one kid — you can add others later</p>
+      <div class="grid-options">
+
+        <div class="grid-opt" onclick="pick(2,'under6',3)">
+          <div class="grid-opt-inner">
+            <img src="images/under 6.webp" alt="Under 6"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">Under 6</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-opt" onclick="pick(2,'6-8',3)">
+          <div class="grid-opt-inner">
+            <img src="images/6-8.webp" alt="6-8"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">6 – 8</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-opt" onclick="pick(2,'9-11',3)">
+          <div class="grid-opt-inner">
+            <img src="images/9-11.webp" alt="9-11"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">9 – 11</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-opt" onclick="pick(2,'12+',3)">
+          <div class="grid-opt-inner">
+            <img src="images/12+.webp" alt="12+"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">12+</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Q3: Gender -->
+  <div class="screen" id="q3">
+    <div class="content">
+      <h2 class="question-title">Choose the gender of your child</h2>
+      <div class="grid-options">
+
+        <div class="grid-opt" onclick="pick(3,'boy',4)">
+          <div class="grid-opt-inner">
+            <img src="images/boy.webp" alt="Boy"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">Boy</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-opt" onclick="pick(3,'girl',4)">
+          <div class="grid-opt-inner">
+            <img src="images/girl.webp" alt="Girl"/>
+            <div class="grid-opt-bar">
+              <span class="grid-opt-bar-label">Girl</span>
+              <div class="grid-opt-bar-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Q4: Main goal -->
+  <div class="screen" id="q4">
+    <div class="content">
+      <h2 class="question-title">What is your main goal right now?</h2>
+      <div class="list-options">
+
+        <div class="list-opt" onclick="listPick(this, 4, 'tantrums', 5)">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+              <path d="M9 9h.01M15 9h.01"/>
+              <path d="M5 3l2 3M19 3l-2 3"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">Reduce the number of tantrums and emotional outbursts</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+        <div class="list-opt" onclick="listPick(this, 4, 'focus', 5)">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <circle cx="12" cy="12" r="7"/>
+              <circle cx="12" cy="12" r="11"/>
+              <line x1="12" y1="2" x2="12" y2="4"/>
+              <line x1="12" y1="20" x2="12" y2="22"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">Help my child focus better and get less distracted</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+        <div class="list-opt" onclick="listPick(this, 4, 'routine', 5)">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <path d="M8 14h.01M12 14h.01M8 18h.01M12 18h.01M16 14h.01"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">Make mornings, homework, and bedtime easier</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+        <div class="list-opt" onclick="listPick(this, 4, 'listen', 5)">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">Teach my child to really listen</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Q5: Focus -->
+  <div class="screen" id="q5">
+    <div class="content">
+      <h2 class="question-title">Is it hard for your child to focus?</h2>
+      <div class="list-options">
+
+        <div class="list-opt" onclick="listPick(this, 5, 'always', 'inter')">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 15s1.5-2 4-2 4 2 4 2"/>
+              <line x1="9" y1="9" x2="9.01" y2="9"/>
+              <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">Yes, all the time</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+        <div class="list-opt" onclick="listPick(this, 5, 'boring', 'inter')">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">Only on boring tasks</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+        <div class="list-opt" onclick="listPick(this, 5, 'well', 'inter')">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">They focus well</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Q6: Tantrum frequency -->
+  <div class="screen" id="q6">
+    <div class="content">
+      <h2 class="question-title">How often does your child have tantrums?</h2>
+      <div class="list-options">
+
+        <div class="list-opt" onclick="listPick(this, 6, 'everyday', 'inter2')">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="15" x2="16" y2="15"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">Almost every day</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+        <div class="list-opt" onclick="listPick(this, 6, 'fewweek', 'inter2')">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <circle cx="8" cy="15" r="1" fill="#7A5C44"/>
+              <circle cx="12" cy="15" r="1" fill="#7A5C44"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">A few times a week</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+        <div class="list-opt" onclick="listPick(this, 6, 'fewmonth', 'inter2')">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <circle cx="12" cy="15" r="1" fill="#7A5C44"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">A few times a month</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+        <div class="list-opt" onclick="listPick(this, 6, 'oncemonth', 'inter2')">
+          <div class="list-opt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7A5C44" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <path d="M12 14v2l1 1"/>
+            </svg>
+          </div>
+          <span class="list-opt-text">Once a month or less</span>
+          <div class="list-opt-radio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Interstitial: Study results -->
+  <div class="screen" id="qinter">
+    <div class="content">
+      <img class="inter-img" src="images/YF3Uk9VO.webp" alt="SAVVY KID app"/>
+      <p class="inter-label">Pilot study · 8 weeks</p>
+      <h2 class="inter-title">The benefits of SAVVY KID<br>aren't just words</h2>
+      <div class="stats">
+        <div class="stat-row">
+          <span class="stat-num">95%</span>
+          <span class="stat-text">of kids had fewer ADHD-related challenges</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-num">92.1%</span>
+          <span class="stat-text">of kids improved their attention</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-num">30%+</span>
+          <span class="stat-text">easier to get through homework and chores</span>
+        </div>
+      </div>
+      <p class="inter-footnote">*Based on results from families using SAVVY KID for 8 weeks. Data were collected before, mid-way, and after the intervention using the Vanderbilt scale, CHEXI, and ERC. All results are statistically significant.</p>
+    </div>
+  </div>
+
+  <!-- Interstitial 2: Emotional regulation -->
+  <div class="screen" id="qinter2">
+    <div class="content">
+      <img class="inter-img" src="images/lvLShHGH.webp" alt="Tantrums Tamed"/>
+      <p class="inter-label">Backed by real data</p>
+      <h2 class="inter-title">SAVVY KID helps reduce<br>emotional outbursts</h2>
+      <div class="stats">
+        <div class="stat-row">
+          <span class="stat-num">38%</span>
+          <span class="stat-text">easier to manage tantrums after just 8 weeks</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-num">36%</span>
+          <span class="stat-text">less intense arguments at home</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-num">73%</span>
+          <span class="stat-text">of kids showed better emotional regulation and impulse control</span>
+        </div>
+      </div>
+      <p class="inter-footnote">*Based on results from families using SAVVY KID for 8 weeks. Data were collected before, mid-way, and after the intervention using the Vanderbilt scale, CHEXI, and ERC. All results are statistically significant.</p>
+    </div>
+  </div>
+
+  <!-- Analyzing -->
+  <div class="screen" id="qanalyze">
+    <div class="content">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+        <button class="btn-skip" onclick="clearInterval(window._revTimer);goTo('qchart','chart')">Skip →</button>
+      </div>
+      <h2 class="analyze-title">Analyzing your answers...</h2>
+
+      <div class="analyze-bars">
+        <div class="analyze-item">
+          <div class="analyze-header">
+            <span class="analyze-label">Behavioral Insights</span>
+            <div class="analyze-right">
+              <div class="analyze-slot">
+                <span class="analyze-pct" id="pct1"></span>
+                <div class="analyze-check" id="check1"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+              </div>
+            </div>
+          </div>
+          <div class="analyze-track"><div class="analyze-fill" id="fill1"></div></div>
+        </div>
+        <div class="analyze-item">
+          <div class="analyze-header">
+            <span class="analyze-label">Custom Plan</span>
+            <div class="analyze-right">
+              <div class="analyze-slot">
+                <span class="analyze-pct" id="pct2"></span>
+                <div class="analyze-check" id="check2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+              </div>
+            </div>
+          </div>
+          <div class="analyze-track"><div class="analyze-fill" id="fill2"></div></div>
+        </div>
+        <div class="analyze-item">
+          <div class="analyze-header">
+            <span class="analyze-label">Parenting Blueprint</span>
+            <div class="analyze-right">
+              <div class="analyze-slot">
+                <span class="analyze-pct" id="pct3"></span>
+                <div class="analyze-check" id="check3"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+              </div>
+            </div>
+          </div>
+          <div class="analyze-track"><div class="analyze-fill" id="fill3"></div></div>
+        </div>
+      </div>
+
+      <div class="review-wrap">
+        <div class="review-card" id="rev0">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-title">Savvy KID is a pretty solid app</div>
+          <div class="review-body">I appreciate that it seems to be designed with ADHD in mind; the tasks are short and engaging, and my kid doesn't get overwhelmed. Definitely see some benefits in focusing. It's helpful and the overall design is great.</div>
+          <div class="review-footer"><div class="review-author">Elena Phillips</div><div class="review-source">Trustpilot</div></div>
+        </div>
+        <div class="review-card" id="rev1">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-title">10 minutes that changed everything</div>
+          <div class="review-body">We started doing Savvy Kid together for 10 minutes after school. Last night he said, "We're a good team now." That sentence healed something in me.</div>
+          <div class="review-footer"><div class="review-author">Alena Cox</div></div>
+        </div>
+        <div class="review-card" id="rev2">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-title">I loved it! Never felt more proud or relieved.</div>
+          <div class="review-body">Dinner used to be the loudest part of our day. Savvy Kid gave us this trick called "the calm restart." Tonight, my kid used it before I even could. I've never felt more proud — or relieved.</div>
+          <div class="review-footer"><div class="review-author">Dana</div><div class="review-source">Trustpilot</div></div>
+        </div>
+        <div class="review-card" id="rev3">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-title">Amazing</div>
+          <div class="review-body">We tried one Savvy Kid lesson before bedtime. Halfway through, my 8-year-old said, "Wait, I can pause my anger?" That line felt like oxygen. I finally felt like I knew what to do.</div>
+          <div class="review-footer"><div class="review-author">Venera</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="screen" id="qchart">
+    <div class="chart-screen-content">
+      <h2 class="chart-title">We hear you.<br>We know what will help.</h2>
+      <p class="chart-subtitle">Let's tailor your plan</p>
+
+      <div class="chart-card">
+        <div class="chart-card-title">Family Conflicts / Meltdowns</div>
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 320 215" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="lineGrad1" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#C8860A"/><stop offset="50%" stop-color="#D4A843"/><stop offset="100%" stop-color="#3A8A60"/></linearGradient>
+              <linearGradient id="fillGrad1" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#C8860A" stop-opacity="0.18"/><stop offset="100%" stop-color="#3A8A60" stop-opacity="0.12"/></linearGradient>
+              <clipPath id="chartClip1"><rect id="clipRect1" x="0" y="0" width="0" height="215"/></clipPath>
+            </defs>
+            <line x1="10" y1="50" x2="318" y2="50" stroke="#D5CCC0" stroke-width="1"/>
+            <line x1="10" y1="85" x2="318" y2="85" stroke="#D5CCC0" stroke-width="1"/>
+            <line x1="10" y1="120" x2="318" y2="120" stroke="#D5CCC0" stroke-width="1"/>
+            <line x1="10" y1="155" x2="318" y2="155" stroke="#D5CCC0" stroke-width="1"/>
+            <g clip-path="url(#chartClip1)"><path id="chart-fill1" d="M10,160 L28,160 C58,160 80,114 96,110 C100,109 106,108 116,120 C126,132 145,114 168,100 C200,78 220,64 228,63 C236,62 242,64 248,72 C254,80 268,52 290,39 C298,37 304,36 308,36 L318,36 L318,182 L10,182 Z" fill="url(#fillGrad1)"/></g>
+            <g clip-path="url(#chartClip1)"><path id="chart-path1" d="M10,160 L28,160 C58,160 80,114 96,110 C100,109 106,108 116,120 C126,132 145,114 168,100 C200,78 220,64 228,63 C236,62 242,64 248,72 C254,80 268,52 290,39 C298,37 304,36 308,36 L318,36" fill="none" stroke="url(#lineGrad1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+            <line x1="28" y1="167" x2="28" y2="181" stroke="#B0A090" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <circle cx="28" cy="160" r="5.5" fill="#fff" stroke="#C8860A" stroke-width="2.5"/>
+            <rect x="28" y="131" width="79" height="22" rx="11" fill="#8A7060"/>
+            <text x="67" y="146" text-anchor="middle" style="font-size:10px;fill:#fff;font-family:Gilroy,Inter,sans-serif;font-weight:700;">Daily struggle</text>
+            <g id="endGroup1" class="chart-end-group">
+              <line x1="308" y1="43" x2="308" y2="181" stroke="#B0A090" stroke-width="1.5" stroke-dasharray="3,3"/>
+              <circle cx="308" cy="36" r="5.5" fill="#fff" stroke="#3A8A60" stroke-width="2.5"/>
+              <rect x="164" y="3" width="154" height="28" rx="14" fill="#2C6B4F"/>
+              <text text-anchor="middle" style="font-size:9.5px;fill:#fff;font-family:Gilroy,Inter,sans-serif;font-weight:700;"><tspan x="241" dy="14">Calm and positive</tspan><tspan x="241" dy="13">atmosphere</tspan></text>
+            </g>
+            <text id="s-dateStart1" x="28" y="196" text-anchor="middle" class="chart-axis-label"></text>
+            <text id="s-dateEnd1"   x="308" y="196" text-anchor="middle" class="chart-axis-label"></text>
+          </svg>
+        </div>
+      </div>
+      <p class="chart-caption">You'll see fewer power struggles once routines feel predictable.</p>
+
+      <div class="chart-card" style="margin-top:40px;">
+        <div class="chart-card-title">Communication &amp; Listening</div>
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 320 215" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="lineGrad2" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#C8860A"/><stop offset="50%" stop-color="#D4A843"/><stop offset="100%" stop-color="#3A8A60"/></linearGradient>
+              <linearGradient id="fillGrad2" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#C8860A" stop-opacity="0.18"/><stop offset="100%" stop-color="#3A8A60" stop-opacity="0.12"/></linearGradient>
+              <clipPath id="chartClip2"><rect id="clipRect2" x="0" y="0" width="0" height="215"/></clipPath>
+            </defs>
+            <line x1="10" y1="50" x2="318" y2="50" stroke="#D5CCC0" stroke-width="1"/>
+            <line x1="10" y1="85" x2="318" y2="85" stroke="#D5CCC0" stroke-width="1"/>
+            <line x1="10" y1="120" x2="318" y2="120" stroke="#D5CCC0" stroke-width="1"/>
+            <line x1="10" y1="155" x2="318" y2="155" stroke="#D5CCC0" stroke-width="1"/>
+            <g clip-path="url(#chartClip2)"><path id="chart-fill2" d="M10,160 L28,160 C75,160 140,158 178,150 C216,142 258,98 286,50 C295,42 302,38 308,36 L318,36 L318,182 L10,182 Z" fill="url(#fillGrad2)"/></g>
+            <g clip-path="url(#chartClip2)"><path id="chart-path2" d="M10,160 L28,160 C75,160 140,158 178,150 C216,142 258,98 286,50 C295,42 302,38 308,36 L318,36" fill="none" stroke="url(#lineGrad2)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+            <line x1="28" y1="167" x2="28" y2="181" stroke="#B0A090" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <circle cx="28" cy="160" r="5.5" fill="#fff" stroke="#C8860A" stroke-width="2.5"/>
+            <rect x="28" y="129" width="108" height="22" rx="11" fill="#8A7060"/>
+            <text x="82" y="144" text-anchor="middle" style="font-size:10px;fill:#fff;font-family:Gilroy,Inter,sans-serif;font-weight:700;">Ignoring each other</text>
+            <g id="endGroup2" class="chart-end-group">
+              <line x1="308" y1="43" x2="308" y2="181" stroke="#B0A090" stroke-width="1.5" stroke-dasharray="3,3"/>
+              <circle cx="308" cy="36" r="5.5" fill="#fff" stroke="#3A8A60" stroke-width="2.5"/>
+              <rect x="188" y="7" width="130" height="22" rx="11" fill="#2C6B4F"/>
+              <text x="253" y="22" text-anchor="middle" style="font-size:9.5px;fill:#fff;font-family:Gilroy,Inter,sans-serif;font-weight:700;">Open communication</text>
+            </g>
+            <text id="s-dateStart2" x="28" y="196" text-anchor="middle" class="chart-axis-label"></text>
+            <text id="s-dateEnd2"   x="308" y="196" text-anchor="middle" class="chart-axis-label"></text>
+          </svg>
+        </div>
+      </div>
+      <p class="chart-caption">When both sides feel heard, cooperation starts to come naturally.</p>
+
+      <div class="chart-card" style="margin-top:40px;">
+        <div class="chart-card-title">Organization &amp; Daily Planning</div>
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 320 215" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="lineGrad3" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#C8860A"/><stop offset="50%" stop-color="#D4A843"/><stop offset="100%" stop-color="#3A8A60"/></linearGradient>
+              <linearGradient id="fillGrad3" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#C8860A" stop-opacity="0.18"/><stop offset="100%" stop-color="#3A8A60" stop-opacity="0.12"/></linearGradient>
+              <clipPath id="chartClip3"><rect id="clipRect3" x="0" y="0" width="0" height="215"/></clipPath>
+            </defs>
+            <line x1="10" y1="50" x2="318" y2="50" stroke="#D5CCC0" stroke-width="1"/>
+            <line x1="10" y1="85" x2="318" y2="85" stroke="#D5CCC0" stroke-width="1"/>
+            <line x1="10" y1="120" x2="318" y2="120" stroke="#D5CCC0" stroke-width="1"/>
+            <line x1="10" y1="155" x2="318" y2="155" stroke="#D5CCC0" stroke-width="1"/>
+            <g clip-path="url(#chartClip3)"><path id="chart-fill3" d="M10,160 L28,160 C55,160 88,118 112,112 C122,109 130,109 140,115 C155,122 175,124 192,118 C215,108 240,78 268,52 C283,42 296,38 308,36 L318,36 L318,182 L10,182 Z" fill="url(#fillGrad3)"/></g>
+            <g clip-path="url(#chartClip3)"><path id="chart-path3" d="M10,160 L28,160 C55,160 88,118 112,112 C122,109 130,109 140,115 C155,122 175,124 192,118 C215,108 240,78 268,52 C283,42 296,38 308,36 L318,36" fill="none" stroke="url(#lineGrad3)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+            <line x1="28" y1="167" x2="28" y2="181" stroke="#B0A090" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <circle cx="28" cy="160" r="5.5" fill="#fff" stroke="#C8860A" stroke-width="2.5"/>
+            <rect x="28" y="131" width="90" height="22" rx="11" fill="#8A7060"/>
+            <text x="73" y="146" text-anchor="middle" style="font-size:10px;fill:#fff;font-family:Gilroy,Inter,sans-serif;font-weight:700;">Messy routines</text>
+            <g id="endGroup3" class="chart-end-group">
+              <line x1="308" y1="43" x2="308" y2="181" stroke="#B0A090" stroke-width="1.5" stroke-dasharray="3,3"/>
+              <circle cx="308" cy="36" r="5.5" fill="#fff" stroke="#3A8A60" stroke-width="2.5"/>
+              <rect x="160" y="3" width="158" height="28" rx="14" fill="#2C6B4F"/>
+              <text text-anchor="middle" style="font-size:9.5px;fill:#fff;font-family:Gilroy,Inter,sans-serif;font-weight:700;"><tspan x="239" dy="14">Structure and</tspan><tspan x="239" dy="13">independence</tspan></text>
+            </g>
+            <text id="s-dateStart3" x="28" y="196" text-anchor="middle" class="chart-axis-label"></text>
+            <text id="s-dateEnd3"   x="308" y="196" text-anchor="middle" class="chart-axis-label"></text>
+          </svg>
+        </div>
+      </div>
+      <p class="chart-caption">Small steps toward structure bring smoother mornings and calmer days.</p>
+    </div>
+  </div>
+
+  <!-- Done -->
+  <div class="screen" id="qdone">
+    <div class="content thankyou-content">
+      <span class="ty-icon">🎉</span>
+      <h2 class="ty-title">You're all set!</h2>
+      <p class="ty-sub">Thanks for sharing. We'll use your answers to personalize the experience for your family.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const TOTAL = 6;
+  const answers = {};
+  let currentQ = 1;
+
+  function buildProgress() {
+    const track = document.getElementById('progressTrack');
+    track.innerHTML = '';
+    for (let i = 1; i <= TOTAL; i++) {
+      const seg = document.createElement('div');
+      seg.className = 'seg'; seg.id = 'seg' + i;
+      seg.innerHTML = `<div class="seg-dot"></div><div class="seg-line"></div>`;
+      track.appendChild(seg);
+    }
+    updateProgress();
+  }
+
+  function updateProgress() {
+    for (let i = 1; i <= TOTAL; i++) {
+      const seg = document.getElementById('seg' + i);
+      if (!seg) continue;
+      seg.className = 'seg ' + (i < currentQ ? 'done' : i === currentQ ? 'active' : 'future');
+    }
+    const btn = document.getElementById('backBtn');
+    btn.style.opacity = currentQ <= 1 ? '0.3' : '1';
+    btn.style.pointerEvents = currentQ <= 1 ? 'none' : 'all';
+  }
+
+  // List single-select with checkmark animation then auto-advance
+  function listPick(el, q, val, next) {
+    document.querySelectorAll('#q' + q + ' .list-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    answers['q' + q] = val;
+    setTimeout(() => {
+      if (next === 'inter') goTo('qinter', 'inter');
+      else if (next === 'done') goTo('qdone', null);
+      else goTo('q' + next, next);
+    }, 480);
+  }
+
+  function pick(q, val, next) {
+    answers['q' + q] = val;
+    setTimeout(() => {
+      goTo(next === 'done' ? 'qdone' : 'q' + next, next === 'done' ? null : next);
+    }, 200);
+  }
+
+  function goTo(toId, nextQ) {
+    const fromId = 'q' + currentQ;
+    const from = document.getElementById(fromId);
+    const to = document.getElementById(toId);
+    from.classList.add('exit');
+    setTimeout(() => {
+      from.classList.remove('active', 'exit');
+      to.classList.add('active');
+      const cbar = document.getElementById('s-continuebar');
+      const cbtn = document.getElementById('s-continuebtn');
+      if (nextQ === null) {
+        currentQ = TOTAL + 2;
+        document.getElementById('topnav').style.display = 'none';
+        cbar.style.display = 'none';
+      } else if (nextQ === 'inter' || nextQ === 'inter2' || nextQ === 'analyze' || nextQ === 'chart') {
+        currentQ = nextQ;
+        document.getElementById('topnav').style.display = 'none';
+        if (nextQ === 'inter') {
+          cbar.style.display = 'block';
+          cbtn.textContent = 'Continue';
+          cbtn.onclick = () => goTo('q6', 6);
+        } else if (nextQ === 'inter2') {
+          cbar.style.display = 'block';
+          cbtn.textContent = 'Continue';
+          cbtn.onclick = () => goTo('qanalyze', 'analyze');
+        } else {
+          cbar.style.display = 'none';
+        }
+        if (nextQ === 'analyze') startAnalysis();
+        if (nextQ === 'chart') startChartAnimation();
+      } else {
+        currentQ = nextQ;
+        document.getElementById('topnav').style.display = 'flex';
+        cbar.style.display = 'none';
+        updateProgress();
+      }
+      updateProgress();
+      window.scrollTo(0, 0);
+    }, 380);
+  }
+
+  function goBack() {
+    if (currentQ <= 1) return;
+    const from = document.getElementById('q' + currentQ);
+    const to = document.getElementById('q' + (currentQ - 1));
+    from.style.transition = 'opacity 0.35s, transform 0.35s';
+    from.style.opacity = '0'; from.style.transform = 'translateX(60px)';
+    setTimeout(() => {
+      from.classList.remove('active'); from.style.cssText = '';
+      to.classList.add('active'); currentQ--;
+      updateProgress(); window.scrollTo(0, 0);
+    }, 340);
+  }
+
+  // ── Analyzing animation ──
+  function startAnalysis() {
+    const reviews = [0,1,2,3].map(i => document.getElementById('rev'+i));
+    let currentRev = 0;
+    reviews[0].classList.add('visible');
+    let revTimer;
+
+    function nextReview() {
+      const prev = reviews[currentRev];
+      prev.classList.add('exit');
+      prev.classList.remove('visible');
+      setTimeout(() => prev.classList.remove('exit'), 600);
+      currentRev = (currentRev + 1) % reviews.length;
+      reviews[currentRev].classList.add('visible');
+    }
+
+    revTimer = setInterval(nextReview, 4500);
+    window._revTimer = revTimer;
+
+    animateBar(1, () => {
+      animateBar(2, () => {
+        animateBar(3, () => {
+          clearInterval(revTimer);
+          setTimeout(() => goTo('qchart', 'chart'), 900);
+        });
+      });
+    });
+  }
+
+  function animateBar(n, onDone) {
+    const fill = document.getElementById('fill' + n);
+    const pct  = document.getElementById('pct'   + n);
+    const chk  = document.getElementById('check' + n);
+    let val = 0;
+    const TICK = 40;
+
+    function getStep() {
+      const base = 0.55;
+      const r = Math.random();
+      if (r < 0.08) return 0.05;
+      if (r < 0.18) return base * 2.4;
+      return base + (Math.random() - 0.5) * 0.3;
+    }
+
+    const timer = setInterval(() => {
+      val = Math.min(val + getStep(), 100);
+      fill.style.width = val + '%';
+      pct.textContent  = Math.round(val) + '%';
+      if (val >= 100) {
+        clearInterval(timer);
+        pct.style.opacity = '0';
+        setTimeout(() => chk.classList.add('visible'), 220);
+        setTimeout(onDone, 600);
+      }
+    }, TICK);
+  }
+
+  // ── Chart screen dates ──
+  (function() {
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const today = new Date();
+    const future = new Date(today); future.setDate(future.getDate() + 32);
+    const fmt = d => MONTHS[d.getMonth()] + ' ' + d.getDate();
+    [1,2,3].forEach(n => {
+      document.getElementById('s-dateStart' + n).textContent = fmt(today);
+      document.getElementById('s-dateEnd'   + n).textContent = fmt(future);
+    });
+  })();
+
+  // ── Chart animation ──
+  function chartEase(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+  function animateChart(n) {
+    const path     = document.getElementById('chart-path' + n);
+    const fill     = document.getElementById('chart-fill' + n);
+    const endGroup = document.getElementById('endGroup'   + n);
+    const clipRect = document.getElementById('clipRect'   + n);
+    const DURATION = 3000;
+    const len = path.getTotalLength();
+    path.style.strokeDasharray  = len;
+    path.style.strokeDashoffset = len;
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min((now - start) / DURATION, 1);
+      const e = chartEase(t);
+      clipRect.setAttribute('width', e * 320);
+      path.style.strokeDashoffset = len * (1 - e);
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        path.style.strokeDashoffset = 0;
+        clipRect.setAttribute('width', 320);
+        fill.style.opacity = '1';
+        endGroup.style.opacity = '1';
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function startChartAnimation() {
+    document.getElementById('s-chartCta').style.display = 'block';
+    [1, 2, 3].forEach(n => {
+      const svg = document.getElementById('chart-path' + n).closest('svg');
+      let done = false;
+      const obs = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting && !done) {
+          done = true; obs.disconnect(); animateChart(n);
+        }
+      }, { threshold: 0.35 });
+      obs.observe(svg);
+    });
+  }
+
+  buildProgress();
+</script>
+<div id="s-continuebar" class="chart-cta-bar" style="display:none;">
+  <button id="s-continuebtn" class="btn-continue"></button>
+</div>
+<div id="s-chartCta" class="chart-cta-bar" style="display:none;">
+  <button class="chart-cta" onclick="goTo('qdone', null)">Get Personalized Plan</button>
+</div>
+</body>
+</html>
